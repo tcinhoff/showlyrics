@@ -19,6 +19,30 @@
             overflow-y: auto;
             max-height: 100vh;
         }
+        
+        /* Custom scrollbar styling for Webkit browsers */
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        /* For Firefox */
+        body {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+        }
         .lyrics-container {
             -webkit-app-region: no-drag;
             cursor: text;
