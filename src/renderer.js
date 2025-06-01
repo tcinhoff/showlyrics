@@ -225,30 +225,63 @@ async function startLyricsMonitoring() {
         } catch (error) {
             console.error('Error monitoring Spotify:', error);
         }
-    }, 1000); // Check every 1 second for better sync
+    }, 500); // Check every 500ms for better sync
 }
 
 async function fetchAndDisplayLyrics(track) {
     try {
         showStatus('Lade Lyrics...', 'info');
-        const lyrics = await lyricsAPI.searchLyrics(track.artist, track.name);
+        const lyrics = await lyricsAPI.searchLyrics(track.artist, track.name, track.duration);
         
         if (lyrics) {
-            const lyricsLines = lyrics.split('\n').filter(line => line.trim() !== '');
-            const lyricsData = {
-                songInfo: `${track.name} - ${track.artist}`,
-                lyrics: lyricsLines,
-                trackDuration: track.duration,
-                trackProgress: track.progress
-            };
+            let lyricsData;
+            
+            if (lyrics.type === 'synchronized' && lyrics.syncedLyrics) {
+                // Parse synchronized lyrics
+                const timestampedLines = lyricsAPI.parseLRCLyrics(lyrics.syncedLyrics);
+                lyricsData = {
+                    songInfo: `${track.name} - ${track.artist}`,
+                    lyrics: timestampedLines.map(line => line.text),
+                    timestampedLyrics: timestampedLines,
+                    trackDuration: track.duration,
+                    trackProgress: track.progress,
+                    isSynchronized: true,
+                    source: lyrics.source
+                };
+                showStatus(`Synchronisierte Lyrics gefunden! (${lyrics.source})`, 'connected');
+            } else if (lyrics.type === 'plain' && lyrics.plainLyrics) {
+                // Use plain lyrics with fallback timing
+                const lyricsLines = lyrics.plainLyrics.split('\n').filter(line => line.trim() !== '');
+                lyricsData = {
+                    songInfo: `${track.name} - ${track.artist}`,
+                    lyrics: lyricsLines,
+                    trackDuration: track.duration,
+                    trackProgress: track.progress,
+                    isSynchronized: false,
+                    source: lyrics.source
+                };
+                showStatus(`Lyrics gefunden (${lyrics.source})`, 'connected');
+            } else if (typeof lyrics === 'string') {
+                // Legacy string response
+                const lyricsLines = lyrics.split('\n').filter(line => line.trim() !== '');
+                lyricsData = {
+                    songInfo: `${track.name} - ${track.artist}`,
+                    lyrics: lyricsLines,
+                    trackDuration: track.duration,
+                    trackProgress: track.progress,
+                    isSynchronized: false
+                };
+                showStatus('Lyrics gefunden!', 'connected');
+            }
+            
             ipcRenderer.send('update-lyrics', lyricsData);
-            showStatus('Lyrics gefunden!', 'connected');
         } else {
             const noLyricsData = {
                 songInfo: `${track.name} - ${track.artist}`,
                 lyrics: ['Keine Lyrics gefunden für diesen Song'],
                 trackDuration: track.duration,
-                trackProgress: track.progress
+                trackProgress: track.progress,
+                isSynchronized: false
             };
             ipcRenderer.send('update-lyrics', noLyricsData);
             showStatus('Keine Lyrics gefunden', 'info');

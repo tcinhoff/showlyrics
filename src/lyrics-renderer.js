@@ -1,11 +1,14 @@
 const { ipcRenderer } = require('electron');
 
 let currentLyrics = [];
+let timestampedLyrics = [];
 let currentLineIndex = 0;
 let autoScrollEnabled = true;
 let trackDuration = 0;
 let trackProgress = 0;
 let isPlaying = false;
+let timingOffset = 2000; // Default 2 second offset to compensate for delay (in ms)
+let isSynchronized = false;
 
 // DOM Elements
 const songInfoElement = document.getElementById('songInfo');
@@ -29,21 +32,38 @@ ipcRenderer.on('playback-position-updated', (event, positionData) => {
 });
 
 function updateLyricsDisplay(lyricsData) {
-    // Update song info
-    songInfoElement.textContent = lyricsData.songInfo;
+    // Update song info with sync indicator
+    let songInfo = lyricsData.songInfo;
+    if (lyricsData.isSynchronized && lyricsData.source) {
+        songInfo += ` • Synced (${lyricsData.source})`;
+    } else if (lyricsData.source) {
+        songInfo += ` • ${lyricsData.source}`;
+    }
+    songInfoElement.textContent = songInfo;
     
     // Update lyrics and track info
     currentLyrics = lyricsData.lyrics;
+    timestampedLyrics = lyricsData.timestampedLyrics || [];
     trackDuration = lyricsData.trackDuration || 0;
     trackProgress = lyricsData.trackProgress || 0;
+    isSynchronized = lyricsData.isSynchronized || false;
     currentLineIndex = 0;
+    
+    console.log(`Lyrics loaded: ${isSynchronized ? 'SYNCHRONIZED' : 'fallback timing'} (${timestampedLyrics.length} timestamped lines)`);
     
     if (currentLyrics && currentLyrics.length > 0) {
         renderLyrics();
         // Calculate initial position based on current progress
         if (trackDuration > 0) {
-            const progressPercent = trackProgress / trackDuration;
-            const estimatedLineIndex = Math.floor(progressPercent * currentLyrics.length);
+            const adjustedProgress = Math.max(0, trackProgress + timingOffset);
+            let estimatedLineIndex;
+            
+            if (isSynchronized && timestampedLyrics.length > 0) {
+                estimatedLineIndex = findCurrentLineByTimestamp(adjustedProgress);
+            } else {
+                estimatedLineIndex = calculateLyricsPosition(adjustedProgress, trackDuration);
+            }
+            
             setCurrentLine(Math.min(estimatedLineIndex, currentLyrics.length - 1));
         }
     } else {
@@ -57,10 +77,18 @@ function updatePlaybackPosition(positionData) {
     isPlaying = positionData.isPlaying;
     
     if (autoScrollEnabled && isPlaying && trackDuration > 0 && currentLyrics.length > 0) {
-        // Calculate which line should be current based on playback position
-        const progressPercent = trackProgress / trackDuration;
-        const estimatedLineIndex = Math.floor(progressPercent * currentLyrics.length);
-        const targetLine = Math.min(Math.max(estimatedLineIndex, 0), currentLyrics.length - 1);
+        // Calculate which line should be current based on playback position with timing offset
+        const adjustedProgress = Math.max(0, trackProgress + timingOffset);
+        let targetLine;
+        
+        if (isSynchronized && timestampedLyrics.length > 0) {
+            // Use precise timestamp-based positioning
+            targetLine = findCurrentLineByTimestamp(adjustedProgress);
+        } else {
+            // Fall back to estimated positioning
+            const estimatedLineIndex = calculateLyricsPosition(adjustedProgress, trackDuration);
+            targetLine = Math.min(Math.max(estimatedLineIndex, 0), currentLyrics.length - 1);
+        }
         
         // Only update if we're not too close to the current line (avoid jittery movement)
         if (Math.abs(targetLine - currentLineIndex) > 0) {
@@ -140,6 +168,89 @@ function showNoLyrics() {
     `;
 }
 
+function findCurrentLineByTimestamp(currentTime) {
+    // Find the current line based on exact timestamps
+    if (!timestampedLyrics || timestampedLyrics.length === 0) {
+        return 0;
+    }
+    
+    // Find the last line that should have started by now
+    let currentLineIndex = 0;
+    for (let i = 0; i < timestampedLyrics.length; i++) {
+        if (timestampedLyrics[i].timestamp <= currentTime) {
+            currentLineIndex = i;
+        } else {
+            break;
+        }
+    }
+    
+    return currentLineIndex;
+}
+
+function calculateLyricsPosition(adjustedProgress, trackDuration) {
+    // Improved lyrics timing algorithm that accounts for song structure
+    // Only used as fallback when synchronized lyrics are not available
+    const progressPercent = adjustedProgress / trackDuration;
+    
+    // Account for typical song structure (intro, verse, chorus, outro)
+    let adjustedPercent = progressPercent;
+    
+    // Songs typically start with intro (first 10-15% often instrumental)
+    // and end with outro (last 5-10% often instrumental/fade)
+    const introEnd = 0.12; // 12% for intro
+    const outroStart = 0.92; // 92% for outro start
+    
+    if (progressPercent < introEnd) {
+        // During intro, lyrics should progress slower
+        adjustedPercent = progressPercent * 0.3;
+    } else if (progressPercent > outroStart) {
+        // During outro, lyrics should be nearly complete
+        adjustedPercent = 0.85 + (progressPercent - outroStart) * 1.5;
+    } else {
+        // Main content (verses/chorus) - map the middle 80% of song to middle 85% of lyrics
+        const mainProgress = (progressPercent - introEnd) / (outroStart - introEnd);
+        adjustedPercent = 0.3 + mainProgress * 0.55;
+    }
+    
+    // Ensure we don't exceed bounds
+    adjustedPercent = Math.max(0, Math.min(1, adjustedPercent));
+    
+    return Math.floor(adjustedPercent * currentLyrics.length);
+}
+
+function showTimingOffsetFeedback() {
+    // Create or update timing feedback element
+    let feedbackElement = document.getElementById('timing-feedback');
+    if (!feedbackElement) {
+        feedbackElement = document.createElement('div');
+        feedbackElement.id = 'timing-feedback';
+        feedbackElement.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 16px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(feedbackElement);
+    }
+    
+    const offsetSeconds = (timingOffset / 1000).toFixed(1);
+    feedbackElement.textContent = `Timing-Offset: ${offsetSeconds}s`;
+    feedbackElement.style.display = 'block';
+    
+    // Hide after 2 seconds
+    clearTimeout(feedbackElement.hideTimeout);
+    feedbackElement.hideTimeout = setTimeout(() => {
+        feedbackElement.style.display = 'none';
+    }, 2000);
+}
+
 // Keyboard shortcuts
 document.addEventListener('keydown', (event) => {
     switch(event.key) {
@@ -154,6 +265,18 @@ document.addEventListener('keydown', (event) => {
             if (currentLineIndex < currentLyrics.length - 1) {
                 setCurrentLine(currentLineIndex + 1);
             }
+            break;
+        case 'ArrowLeft':
+            event.preventDefault();
+            // Decrease timing offset (make lyrics appear earlier)
+            timingOffset = Math.max(-5000, timingOffset - 250);
+            showTimingOffsetFeedback();
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            // Increase timing offset (make lyrics appear later)
+            timingOffset = Math.min(10000, timingOffset + 250);
+            showTimingOffsetFeedback();
             break;
         case ' ':
             event.preventDefault();

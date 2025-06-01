@@ -7,6 +7,9 @@ class SpotifyAPI {
         this.accessToken = null;
         this.refreshToken = null;
         this.tokenExpiry = null;
+        this.lastApiCallTime = 0;
+        this.avgLatency = 0;
+        this.latencyMeasurements = [];
     }
 
     setCredentials(clientId, clientSecret) {
@@ -103,26 +106,35 @@ class SpotifyAPI {
         await this.ensureValidToken();
 
         try {
+            const startTime = Date.now();
             const response = await axios.get('https://api.spotify.com/v1/me/player/currently-playing', {
                 headers: {
                     'Authorization': `Bearer ${this.accessToken}`
                 }
             });
+            const endTime = Date.now();
+            
+            // Track latency for compensation
+            this.trackLatency(endTime - startTime);
+            this.lastApiCallTime = startTime;
 
             if (response.status === 204 || !response.data.item) {
                 return null; // Nothing playing
             }
 
             const track = response.data.item;
+            const apiCallLatency = endTime - startTime;
+            
             return {
                 name: track.name,
                 artist: track.artists.map(artist => artist.name).join(', '),
                 album: track.album.name,
                 duration: track.duration_ms,
-                progress: response.data.progress_ms,
+                progress: response.data.progress_ms + apiCallLatency, // Compensate for API latency
                 isPlaying: response.data.is_playing,
                 id: track.id,
-                uri: track.uri
+                uri: track.uri,
+                apiLatency: apiCallLatency
             };
         } catch (error) {
             if (error.response?.status === 401) {
@@ -134,6 +146,22 @@ class SpotifyAPI {
             console.error('Failed to get currently playing:', error.response?.data || error.message);
             return null;
         }
+    }
+
+    trackLatency(latency) {
+        this.latencyMeasurements.push(latency);
+        
+        // Keep only last 20 measurements for rolling average
+        if (this.latencyMeasurements.length > 20) {
+            this.latencyMeasurements.shift();
+        }
+        
+        // Calculate average latency
+        this.avgLatency = this.latencyMeasurements.reduce((a, b) => a + b, 0) / this.latencyMeasurements.length;
+    }
+
+    getAverageLatency() {
+        return this.avgLatency;
     }
 
     async searchTrack(artist, title) {
