@@ -17,16 +17,9 @@ const toggleLyricsButton = document.getElementById('toggleLyrics');
 const testLyricsButton = document.getElementById('testLyrics');
 const statusDiv = document.getElementById('status');
 const currentSongDiv = document.getElementById('currentSong');
+const autoStartCheckbox = document.getElementById('autoStartCheckbox');
 
-// Topbar Elements
-const topbar = document.getElementById('topbar');
 const settingsPanel = document.getElementById('settingsPanel');
-const currentSongCompact = document.getElementById('currentSongCompact');
-const topbarStatus = document.getElementById('topbarStatus');
-const toggleLyricsTopbar = document.getElementById('toggleLyricsTopbar');
-const settingsToggle = document.getElementById('settingsToggle');
-
-let isCompactMode = false;
 
 // Load saved credentials
 const savedCredentials = localStorage.getItem('spotifyCredentials');
@@ -53,47 +46,14 @@ if (savedTokens) {
     }
 }
 
-// Check if we should show compact mode
-function checkCompactMode() {
-    const hasCredentials = savedCredentials && JSON.parse(savedCredentials).clientId && JSON.parse(savedCredentials).clientSecret;
-    const hasTokens = savedTokens && JSON.parse(savedTokens).accessToken;
-    
-    if (hasCredentials && hasTokens) {
-        switchToCompactMode();
-    }
-}
 
-function switchToCompactMode() {
-    isCompactMode = true;
-    topbar.classList.add('visible');
-    settingsPanel.classList.add('compact');
-    updateTopbarStatus('Verbunden');
-}
-
-function switchToFullMode() {
-    isCompactMode = false;
-    topbar.classList.remove('visible');
-    settingsPanel.classList.remove('compact');
-}
-
-// Initialize mode
-checkCompactMode();
+// Initialize auto-start checkbox
+initializeAutoStart();
 
 function showStatus(message, type = 'info') {
     statusDiv.className = `status ${type}`;
     statusDiv.textContent = message;
     statusDiv.style.display = 'block';
-    
-    // Also update topbar status if in compact mode
-    if (isCompactMode) {
-        updateTopbarStatus(message);
-    }
-}
-
-function updateTopbarStatus(message) {
-    if (topbarStatus) {
-        topbarStatus.textContent = message;
-    }
 }
 
 function saveCredentials() {
@@ -169,7 +129,6 @@ function startCallbackServer() {
                     testConnectionButton.disabled = false;
                     saveTokens();
                     startLyricsMonitoring();
-                    switchToCompactMode();
                 } else {
                     res.writeHead(200, { 'Content-Type': 'text/html' });
                     res.end('<h1>Verbindung fehlgeschlagen</h1><p>Sie können dieses Fenster schließen.</p>');
@@ -212,21 +171,6 @@ toggleLyricsButton.addEventListener('click', () => {
     ipcRenderer.send('toggle-lyrics-window');
 });
 
-// Topbar event listeners
-toggleLyricsTopbar.addEventListener('click', () => {
-    ipcRenderer.send('toggle-lyrics-window');
-    toggleLyricsTopbar.classList.toggle('active');
-});
-
-settingsToggle.addEventListener('click', () => {
-    if (isCompactMode) {
-        switchToFullMode();
-        settingsToggle.textContent = '❌ Schließen';
-    } else {
-        switchToCompactMode();
-        settingsToggle.innerHTML = '<span>⚙️</span> Settings';
-    }
-});
 
 testLyricsButton.addEventListener('click', () => {
     const testLyrics = {
@@ -249,11 +193,6 @@ function updateCurrentSong(track) {
         <small>${track.album}</small>
     `;
     currentSongDiv.innerHTML = songInfo;
-    
-    // Also update compact view
-    if (isCompactMode && currentSongCompact) {
-        currentSongCompact.textContent = `${track.name} - ${track.artist}`;
-    }
 }
 
 async function startLyricsMonitoring() {
@@ -361,3 +300,36 @@ async function fetchAndDisplayLyrics(track) {
         showStatus('Fehler beim Laden der Lyrics', 'error');
     }
 }
+
+// Auto-start functionality
+async function initializeAutoStart() {
+    try {
+        const isEnabled = await ipcRenderer.invoke('get-auto-start-enabled');
+        autoStartCheckbox.checked = isEnabled;
+    } catch (error) {
+        console.error('Error checking auto-start status:', error);
+    }
+}
+
+autoStartCheckbox.addEventListener('change', async () => {
+    try {
+        const success = await ipcRenderer.invoke('set-auto-start', autoStartCheckbox.checked);
+        if (success) {
+            showStatus(
+                autoStartCheckbox.checked ? 
+                'Auto-Start aktiviert' : 
+                'Auto-Start deaktiviert', 
+                'info'
+            );
+        } else {
+            showStatus('Fehler beim Ändern der Auto-Start Einstellung', 'error');
+            // Revert checkbox state
+            autoStartCheckbox.checked = !autoStartCheckbox.checked;
+        }
+    } catch (error) {
+        console.error('Error setting auto-start:', error);
+        showStatus('Fehler beim Ändern der Auto-Start Einstellung', 'error');
+        // Revert checkbox state
+        autoStartCheckbox.checked = !autoStartCheckbox.checked;
+    }
+});

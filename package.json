@@ -7,9 +7,15 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "build": "electron-builder",
+    "build:win": "electron-builder --win",
     "dist": "electron-builder --publish=never"
   },
-  "keywords": ["spotify", "lyrics", "electron", "desktop"],
+  "keywords": [
+    "spotify",
+    "lyrics",
+    "electron",
+    "desktop"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -18,8 +24,8 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
-    "node-spotify-api": "^1.1.1",
-    "genius-lyrics-api": "^3.0.2"
+    "genius-lyrics-api": "^3.0.2",
+    "node-spotify-api": "^1.1.1"
   },
   "build": {
     "appId": "com.showlyrics.app",
