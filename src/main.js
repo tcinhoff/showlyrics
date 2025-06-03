@@ -63,10 +63,7 @@ function createLyricsWindow() {
 }
 
 function createTray() {
-  // Create a simple icon for the tray (we can use a Unicode emoji or create a simple icon)
-  const trayIcon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAAYSURBVDiNY/z//z8DJQAggBhHDRg1gMEAAP+8A/0DHTuiAAAAAElFTkSuQmCC'
-  );
+  const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icon.png'));
   
   tray = new Tray(trayIcon);
   
