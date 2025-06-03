@@ -21,7 +21,7 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  
+
   // Hide window instead of closing it
   mainWindow.on('close', (event) => {
     if (!app.isQuiting) {
@@ -29,7 +29,7 @@ function createMainWindow() {
       mainWindow.hide();
     }
   });
-  
+
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
@@ -37,7 +37,7 @@ function createMainWindow() {
 
 function createLyricsWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
+
   lyricsWindow = new BrowserWindow({
     width: 350,
     height: 200,
@@ -56,7 +56,7 @@ function createLyricsWindow() {
   });
 
   lyricsWindow.loadFile(path.join(__dirname, 'lyrics.html'));
-  
+
   if (process.argv.includes('--dev')) {
     lyricsWindow.webContents.openDevTools();
   }
@@ -64,9 +64,9 @@ function createLyricsWindow() {
 
 function createTray() {
   const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icon.png'));
-  
+
   tray = new Tray(trayIcon);
-  
+
   // Create context menu
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -96,10 +96,10 @@ function createTray() {
       }
     }
   ]);
-  
+
   tray.setContextMenu(contextMenu);
   tray.setToolTip('ShowLyrics - Lyrics für Spotify');
-  
+
   // Handle tray click
   tray.on('click', () => {
     toggleLyrics();
