@@ -29,7 +29,43 @@ if (savedTokens) {
     if (accessToken) {
         testConnectionButton.disabled = false;
         showStatus('Gespeicherte Verbindung gefunden', 'info');
+        updateConnectionButton(true);
         startLyricsMonitoring();
+    }
+}
+
+// Function to check if Spotify is connected
+function isSpotifyConnected() {
+    return spotify.accessToken && spotify.accessToken.length > 0;
+}
+
+// Function to disconnect from Spotify
+function disconnectSpotify() {
+    spotify.accessToken = null;
+    spotify.refreshToken = null;
+    spotify.tokenExpiry = null;
+    localStorage.removeItem('spotifyTokens');
+    
+    testConnectionButton.disabled = true;
+    currentSongDiv.textContent = 'Nicht verbunden';
+    
+    if (lyricsCheckInterval) {
+        clearInterval(lyricsCheckInterval);
+        lyricsCheckInterval = null;
+    }
+    
+    updateConnectionButton(false);
+    showStatus('Von Spotify getrennt', 'info');
+}
+
+// Function to update the connection button text and functionality
+function updateConnectionButton(connected) {
+    if (connected) {
+        connectButton.textContent = 'Von Spotify trennen';
+        connectButton.className = 'disconnect-button';
+    } else {
+        connectButton.textContent = 'Mit Spotify verbinden';
+        connectButton.className = '';
     }
 }
 
@@ -54,18 +90,24 @@ function saveTokens() {
 }
 
 connectButton.addEventListener('click', async () => {
-    try {
-        const authUrl = await spotify.getAuthUrl();
-        showStatus('Browser wird geöffnet für Spotify Autorisierung...', 'info');
-        
-        // Open auth URL in default browser
-        shell.openExternal(authUrl);
-        
-        // Start a simple HTTP server to catch the callback
-        startCallbackServer();
-        
-    } catch (error) {
-        showStatus('Fehler beim Erstellen der Autorisierungs-URL: ' + error.message, 'error');
+    if (isSpotifyConnected()) {
+        // Disconnect
+        disconnectSpotify();
+    } else {
+        // Connect
+        try {
+            const authUrl = await spotify.getAuthUrl();
+            showStatus('Browser wird geöffnet für Spotify Autorisierung...', 'info');
+            
+            // Open auth URL in default browser
+            shell.openExternal(authUrl);
+            
+            // Start a simple HTTP server to catch the callback
+            startCallbackServer();
+            
+        } catch (error) {
+            showStatus('Fehler beim Erstellen der Autorisierungs-URL: ' + error.message, 'error');
+        }
     }
 });
 
@@ -96,6 +138,7 @@ function startCallbackServer() {
                     res.end('<h1>Erfolgreich verbunden!</h1><p>Sie können dieses Fenster schließen.</p>');
                     showStatus('Erfolgreich mit Spotify verbunden!', 'connected');
                     testConnectionButton.disabled = false;
+                    updateConnectionButton(true);
                     saveTokens();
                     startLyricsMonitoring();
                 } else {
