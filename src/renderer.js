@@ -9,8 +9,6 @@ let currentTrack = null;
 let lyricsCheckInterval = null;
 
 // DOM Elements
-const clientIdInput = document.getElementById('clientId');
-const clientSecretInput = document.getElementById('clientSecret');
 const connectButton = document.getElementById('connectSpotify');
 const testConnectionButton = document.getElementById('testConnection');
 const toggleLyricsButton = document.getElementById('toggleLyrics');
@@ -20,17 +18,6 @@ const currentSongDiv = document.getElementById('currentSong');
 const autoStartCheckbox = document.getElementById('autoStartCheckbox');
 
 const settingsPanel = document.getElementById('settingsPanel');
-
-// Load saved credentials
-const savedCredentials = localStorage.getItem('spotifyCredentials');
-if (savedCredentials) {
-    const { clientId, clientSecret } = JSON.parse(savedCredentials);
-    clientIdInput.value = clientId || '';
-    clientSecretInput.value = clientSecret || '';
-    if (clientId && clientSecret) {
-        spotify.setCredentials(clientId, clientSecret);
-    }
-}
 
 // Load saved tokens
 const savedTokens = localStorage.getItem('spotifyTokens');
@@ -56,13 +43,6 @@ function showStatus(message, type = 'info') {
     statusDiv.style.display = 'block';
 }
 
-function saveCredentials() {
-    const credentials = {
-        clientId: clientIdInput.value,
-        clientSecret: clientSecretInput.value
-    };
-    localStorage.setItem('spotifyCredentials', JSON.stringify(credentials));
-}
 
 function saveTokens() {
     const tokens = {
@@ -74,17 +54,6 @@ function saveTokens() {
 }
 
 connectButton.addEventListener('click', async () => {
-    const clientId = clientIdInput.value.trim();
-    const clientSecret = clientSecretInput.value.trim();
-
-    if (!clientId || !clientSecret) {
-        showStatus('Bitte Client ID und Client Secret eingeben', 'error');
-        return;
-    }
-
-    spotify.setCredentials(clientId, clientSecret);
-    saveCredentials();
-
     try {
         const authUrl = await spotify.getAuthUrl();
         showStatus('Browser wird geöffnet für Spotify Autorisierung...', 'info');

@@ -1,23 +1,31 @@
 const axios = require('axios');
+const crypto = require('crypto');
 
 class SpotifyAPI {
     constructor() {
-        this.clientId = null;
-        this.clientSecret = null;
+        // Built-in app credentials - replace with your actual Spotify app Client ID
+        this.clientId = '0db981a94b1e4e4e8f0ddb48311223d9';
         this.accessToken = null;
         this.refreshToken = null;
         this.tokenExpiry = null;
         this.lastApiCallTime = 0;
         this.avgLatency = 0;
         this.latencyMeasurements = [];
+        
+        // PKCE (Proof Key for Code Exchange) parameters
+        this.codeVerifier = null;
+        this.codeChallenge = null;
     }
 
-    setCredentials(clientId, clientSecret) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
+    // Generate PKCE parameters for secure OAuth without client secret
+    generatePKCEParams() {
+        this.codeVerifier = crypto.randomBytes(32).toString('base64url');
+        this.codeChallenge = crypto.createHash('sha256').update(this.codeVerifier).digest('base64url');
     }
 
     async getAuthUrl() {
+        this.generatePKCEParams();
+        
         const scopes = 'user-read-currently-playing user-read-playback-state';
         const redirectUri = 'http://127.0.0.1:8888/callback';
         const state = Math.random().toString(36).substring(7);
@@ -27,7 +35,9 @@ class SpotifyAPI {
             `client_id=${this.clientId}&` +
             `scope=${encodeURIComponent(scopes)}&` +
             `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-            `state=${state}`;
+            `state=${state}&` +
+            `code_challenge_method=S256&` +
+            `code_challenge=${this.codeChallenge}`;
     }
 
     async exchangeCodeForToken(code) {
@@ -38,7 +48,7 @@ class SpotifyAPI {
                     code: code,
                     redirect_uri: 'http://127.0.0.1:8888/callback',
                     client_id: this.clientId,
-                    client_secret: this.clientSecret
+                    code_verifier: this.codeVerifier
                 }),
                 {
                     headers: {
@@ -68,8 +78,7 @@ class SpotifyAPI {
                 new URLSearchParams({
                     grant_type: 'refresh_token',
                     refresh_token: this.refreshToken,
-                    client_id: this.clientId,
-                    client_secret: this.clientSecret
+                    client_id: this.clientId
                 }),
                 {
                     headers: {
