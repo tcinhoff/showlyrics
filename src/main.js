@@ -9,6 +9,8 @@ let autoHideEnabled = true;
 let autoHideTimeout = null;
 let lastPlayingState = null;
 
+// Disable hardware acceleration to fix GBM errors on Linux
+app.disableHardwareAcceleration();
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
