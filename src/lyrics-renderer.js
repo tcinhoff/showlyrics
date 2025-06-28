@@ -117,15 +117,18 @@ function renderLyrics() {
 function setCurrentLine(index) {
     // Remove previous highlighting
     document.querySelectorAll('.lyrics-line').forEach(line => {
-        line.classList.remove('current', 'past', 'future');
+        line.classList.remove('current', 'current-previous', 'past', 'future');
     });
     
     // Add new highlighting
     currentLyrics.forEach((_, i) => {
         const lineElement = document.getElementById(`line-${i}`);
         if (lineElement) {
-            if (i < index) {
+            if (i < index - 1) {
                 lineElement.classList.add('past');
+            } else if (i === index - 1 && index > 0) {
+                // Highlight previous line as well
+                lineElement.classList.add('current-previous');
             } else if (i === index) {
                 lineElement.classList.add('current');
             } else {
