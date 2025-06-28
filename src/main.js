@@ -8,6 +8,7 @@ let isLyricsVisible = false; // Start hidden
 let autoHideEnabled = true;
 let autoHideTimeout = null;
 let lastPlayingState = null;
+let manuallyHidden = false; // Track if user manually closed the window
 
 // Disable hardware acceleration to fix GBM errors on Linux
 app.disableHardwareAcceleration();
@@ -118,16 +119,18 @@ function toggleLyrics() {
     if (lyricsWindow.isVisible()) {
       lyricsWindow.hide();
       isLyricsVisible = false;
+      manuallyHidden = true; // Mark as manually hidden
     } else {
       lyricsWindow.show();
       isLyricsVisible = true;
+      manuallyHidden = false; // Reset when manually shown
     }
     updateTrayMenu();
   }
 }
 
 function autoShowLyrics() {
-  if (lyricsWindow && !lyricsWindow.isVisible()) {
+  if (lyricsWindow && !lyricsWindow.isVisible() && !manuallyHidden) {
     lyricsWindow.show();
     isLyricsVisible = true;
     updateTrayMenu();
@@ -286,6 +289,7 @@ ipcMain.on('hide-lyrics-window', () => {
   if (lyricsWindow && lyricsWindow.isVisible()) {
     lyricsWindow.hide();
     isLyricsVisible = false;
+    manuallyHidden = true; // Mark as manually hidden when closed via ESC or close button
     updateTrayMenu();
   }
 });
