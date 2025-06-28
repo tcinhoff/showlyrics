@@ -17,8 +17,7 @@ const closeBtn = document.getElementById('closeBtn');
 
 // Handle close button
 closeBtn.addEventListener('click', () => {
-    const { remote } = require('electron');
-    remote.getCurrentWindow().hide();
+    ipcRenderer.send('hide-lyrics-window');
 });
 
 // Listen for lyrics updates from main process
@@ -105,11 +104,6 @@ function renderLyrics() {
         lineElement.className = 'lyrics-line';
         lineElement.textContent = line;
         lineElement.id = `line-${index}`;
-        
-        // Add click handler to jump to line
-        lineElement.addEventListener('click', () => {
-            setCurrentLine(index);
-        });
         
         lyricsContainer.appendChild(lineElement);
     });
@@ -288,8 +282,7 @@ document.addEventListener('keydown', (event) => {
             }
             break;
         case 'Escape':
-            const { remote } = require('electron');
-            remote.getCurrentWindow().hide();
+            ipcRenderer.send('hide-lyrics-window');
             break;
     }
 });
@@ -313,6 +306,52 @@ lyricsContainer.addEventListener('dblclick', () => {
     } else {
         stopAutoScroll();
     }
+});
+
+// Window dragging functionality
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+
+// Make the entire window draggable
+document.addEventListener('mousedown', (event) => {
+    // Don't start dragging if clicking on close button
+    if (event.target.id === 'closeBtn' || event.target.closest('#closeBtn')) {
+        return;
+    }
+    
+    isDragging = true;
+    dragStart.x = event.clientX;
+    dragStart.y = event.clientY;
+    
+    // Prevent text selection during drag
+    event.preventDefault();
+    document.body.style.userSelect = 'none';
+    document.body.classList.add('dragging');
+});
+
+document.addEventListener('mousemove', (event) => {
+    if (!isDragging) return;
+    
+    const deltaX = event.clientX - dragStart.x;
+    const deltaY = event.clientY - dragStart.y;
+    
+    ipcRenderer.send('move-lyrics-window', { deltaX, deltaY });
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        document.body.style.userSelect = '';
+        document.body.classList.remove('dragging');
+        
+        // Send interaction event to prevent auto-hide
+        ipcRenderer.send('lyrics-interaction');
+    }
+});
+
+// Prevent default drag behavior on images and other elements
+document.addEventListener('dragstart', (event) => {
+    event.preventDefault();
 });
 
 // Initialize with welcome message

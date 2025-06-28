@@ -279,6 +279,25 @@ ipcMain.handle('set-auto-start', async (event, enabled) => {
   }
 });
 
+// IPC handlers for lyrics window control
+ipcMain.on('hide-lyrics-window', () => {
+  if (lyricsWindow && lyricsWindow.isVisible()) {
+    lyricsWindow.hide();
+    isLyricsVisible = false;
+    updateTrayMenu();
+  }
+});
+
+ipcMain.on('move-lyrics-window', (event, { deltaX, deltaY }) => {
+  if (lyricsWindow) {
+    const currentPosition = lyricsWindow.getPosition();
+    lyricsWindow.setPosition(
+      currentPosition[0] + deltaX,
+      currentPosition[1] + deltaY
+    );
+  }
+});
+
 // Setup lyrics window interaction tracking
 function setupLyricsInteractionTracking() {
   // Interaction tracking is now handled directly in lyrics-renderer.js

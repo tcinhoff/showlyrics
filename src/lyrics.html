@@ -14,7 +14,7 @@
             line-height: 1.6;
             border-radius: 10px;
             backdrop-filter: blur(10px);
-            -webkit-app-region: drag;
+            -webkit-app-region: no-drag;
             cursor: move;
             overflow-y: auto;
             max-height: 100vh;
@@ -101,6 +101,11 @@
         }
         .control-btn:hover {
             background: rgba(29, 185, 84, 1);
+        }
+        .dragging {
+            opacity: 0.8;
+            transform: scale(0.98);
+            transition: all 0.1s ease;
         }
     </style>
 </head>
