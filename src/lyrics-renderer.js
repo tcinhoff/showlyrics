@@ -4,11 +4,14 @@ let currentLyrics = [];
 let timestampedLyrics = [];
 let currentLineIndex = 0;
 let autoScrollEnabled = true;
+let autoScrollTemporarilyDisabled = false;
+let autoScrollReEnableTimer = null;
 let trackDuration = 0;
 let trackProgress = 0;
 let isPlaying = false;
 let timingOffset = 2000; // Default 2 second offset to compensate for delay (in ms)
 let isSynchronized = false;
+const AUTO_SCROLL_RESUME_DELAY = 3000; // 3 seconds
 
 // DOM Elements
 const songInfoElement = document.getElementById('songInfo');
@@ -75,7 +78,7 @@ function updatePlaybackPosition(positionData) {
     trackDuration = positionData.duration;
     isPlaying = positionData.isPlaying;
     
-    if (autoScrollEnabled && isPlaying && trackDuration > 0 && currentLyrics.length > 0) {
+    if (autoScrollEnabled && !autoScrollTemporarilyDisabled && isPlaying && trackDuration > 0 && currentLyrics.length > 0) {
         // Calculate which line should be current based on playback position with timing offset
         const adjustedProgress = Math.max(0, trackProgress + timingOffset);
         let targetLine;
@@ -152,6 +155,24 @@ function startAutoScroll() {
 function stopAutoScroll() {
     autoScrollEnabled = false;
 }
+
+function temporarilyDisableAutoScroll() {
+    autoScrollTemporarilyDisabled = true;
+    
+    // Clear existing timer
+    if (autoScrollReEnableTimer) {
+        clearTimeout(autoScrollReEnableTimer);
+    }
+    
+    // Set new timer to re-enable auto-scroll
+    autoScrollReEnableTimer = setTimeout(() => {
+        autoScrollTemporarilyDisabled = false;
+        console.log('Auto-scroll re-enabled after manual interaction');
+    }, AUTO_SCROLL_RESUME_DELAY);
+    
+    console.log('Auto-scroll temporarily disabled due to manual interaction');
+}
+
 
 function showNoLyrics() {
     lyricsContainer.innerHTML = `
@@ -251,12 +272,14 @@ document.addEventListener('keydown', (event) => {
         case 'ArrowUp':
             event.preventDefault();
             if (currentLineIndex > 0) {
+                temporarilyDisableAutoScroll();
                 setCurrentLine(currentLineIndex - 1);
             }
             break;
         case 'ArrowDown':
             event.preventDefault();
             if (currentLineIndex < currentLyrics.length - 1) {
+                temporarilyDisableAutoScroll();
                 setCurrentLine(currentLineIndex + 1);
             }
             break;
@@ -275,10 +298,20 @@ document.addEventListener('keydown', (event) => {
         case ' ':
             event.preventDefault();
             autoScrollEnabled = !autoScrollEnabled;
+            
+            // Clear temporary disable state when manually toggling
+            autoScrollTemporarilyDisabled = false;
+            if (autoScrollReEnableTimer) {
+                clearTimeout(autoScrollReEnableTimer);
+                autoScrollReEnableTimer = null;
+            }
+            
             if (autoScrollEnabled) {
                 startAutoScroll();
+                console.log('Auto-scroll manually enabled');
             } else {
                 stopAutoScroll();
+                console.log('Auto-scroll manually disabled');
             }
             break;
         case 'Escape':
@@ -291,6 +324,8 @@ document.addEventListener('keydown', (event) => {
 lyricsContainer.addEventListener('wheel', (event) => {
     event.preventDefault();
     
+    temporarilyDisableAutoScroll();
+    
     if (event.deltaY > 0 && currentLineIndex < currentLyrics.length - 1) {
         setCurrentLine(currentLineIndex + 1);
     } else if (event.deltaY < 0 && currentLineIndex > 0) {
@@ -301,10 +336,20 @@ lyricsContainer.addEventListener('wheel', (event) => {
 // Double-click to toggle auto-scroll
 lyricsContainer.addEventListener('dblclick', () => {
     autoScrollEnabled = !autoScrollEnabled;
+    
+    // Clear temporary disable state when manually toggling
+    autoScrollTemporarilyDisabled = false;
+    if (autoScrollReEnableTimer) {
+        clearTimeout(autoScrollReEnableTimer);
+        autoScrollReEnableTimer = null;
+    }
+    
     if (autoScrollEnabled) {
         startAutoScroll();
+        console.log('Auto-scroll manually enabled');
     } else {
         stopAutoScroll();
+        console.log('Auto-scroll manually disabled');
     }
 });
 
