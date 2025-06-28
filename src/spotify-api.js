@@ -3,8 +3,8 @@ const crypto = require('crypto');
 
 class SpotifyAPI {
     constructor() {
-        // Built-in app credentials - replace with your actual Spotify app Client ID
-        this.clientId = '0db981a94b1e4e4e8f0ddb48311223d9';
+        // Load Spotify Client ID from environment variables
+        this.clientId = process.env.SPOTIFY_CLIENT_ID || 'your_spotify_client_id_here';
         this.accessToken = null;
         this.refreshToken = null;
         this.tokenExpiry = null;

@@ -1,6 +1,6 @@
 # Spotify API Setup Guide
 
-Um die Spotify-Integration in ShowLyrics zu verwenden, müssen Sie eine Spotify-App registrieren und die Client ID in den Code einfügen.
+Um die Spotify-Integration in ShowLyrics zu verwenden, müssen Sie eine Spotify-App registrieren und die Client ID in einer `.env` Datei konfigurieren.
 
 ## Schritt 1: Spotify App erstellen
 
@@ -21,18 +21,20 @@ Um die Spotify-Integration in ShowLyrics zu verwenden, müssen Sie eine Spotify-
 2. Gehen Sie zu "Settings"
 3. Kopieren Sie die **Client ID** (eine lange Zeichenkette)
 
-## Schritt 3: Client ID in den Code einfügen
+## Schritt 3: .env Datei konfigurieren
 
-1. Öffnen Sie die Datei `src/spotify-api.js`
-2. Suchen Sie nach der Zeile:
-   ```javascript
-   this.clientId = 'your_spotify_client_id_here';
+1. Kopieren Sie die Datei `.env.example` zu `.env`:
+   ```bash
+   cp .env.example .env
    ```
-3. Ersetzen Sie `'your_spotify_client_id_here'` mit Ihrer echten Client ID:
-   ```javascript
-   this.clientId = 'ihre_echte_client_id_hier';
+2. Öffnen Sie die `.env` Datei in einem Texteditor
+3. Ersetzen Sie `your_spotify_client_id_here` mit Ihrer echten Client ID:
+   ```
+   SPOTIFY_CLIENT_ID=ihre_echte_client_id_hier
    ```
 4. Speichern Sie die Datei
+
+**Wichtig:** Committen Sie die `.env` Datei niemals in Git! Sie ist bereits in der `.gitignore` enthalten.
 
 ## Schritt 4: App neu starten
 
@@ -45,14 +47,14 @@ Um die Spotify-Integration in ShowLyrics zu verwenden, müssen Sie eine Spotify-
 ## Hinweise
 
 - Die **Client Secret** wird NICHT benötigt, da die App PKCE (Proof Key for Code Exchange) für sichere Authentifizierung verwendet
-- Ihre Client ID ist öffentlich sichtbar und nicht geheim
+- Ihre Client ID sollte in der `.env` Datei gespeichert und nicht öffentlich geteilt werden
 - Die Redirect URI muss exakt `http://127.0.0.1:8888/callback` sein
-- Wenn Sie die App verteilen möchten, sollten Sie Ihre eigene Client ID verwenden
+- Jeder Benutzer sollte seine eigene Spotify App und Client ID verwenden
 
 ## Warum diese Lösung?
 
 Diese Lösung:
-- ✅ Erfordert keine API-Schlüssel von Benutzern
-- ✅ Ist sicher (PKCE OAuth Flow)
-- ✅ Bietet eine nahtlose Benutzererfahrung
-- ✅ Entspricht den Spotify-Richtlinien
+- ✅ Schützt Ihre persönlichen API-Credentials
+- ✅ Ist sicher (PKCE OAuth Flow ohne Client Secret)
+- ✅ Ermöglicht einfache Konfiguration über `.env` Datei
+- ✅ Entspricht den Spotify-Richtlinien und Best Practices

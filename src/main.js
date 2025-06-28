@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 
+// Load environment variables
+require('dotenv').config();
+
 let mainWindow;
 let lyricsWindow;
 let tray;

@@ -20,14 +20,28 @@ npm install
 
 ## Einrichtung
 
-### Spotify API Credentials
+### 1. Spotify API Credentials
 
 1. Gehen Sie zu [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Erstellen Sie eine neue App
-3. Notieren Sie sich Client ID und Client Secret
-4. Fügen Sie `http://localhost:8888/callback` als Redirect URI hinzu
+3. Notieren Sie sich die **Client ID** (Client Secret wird nicht benötigt!)
+4. Fügen Sie `http://127.0.0.1:8888/callback` als Redirect URI hinzu
 
-### App starten
+### 2. Environment-Datei konfigurieren
+
+1. Kopieren Sie die Datei `.env.example` zu `.env`:
+```bash
+cp .env.example .env
+```
+
+2. Öffnen Sie die `.env` Datei und tragen Sie Ihre Spotify Client ID ein:
+```
+SPOTIFY_CLIENT_ID=ihre_echte_client_id_hier
+```
+
+**Wichtig:** Die `.env` Datei enthält Ihre persönlichen API-Credentials und sollte niemals in Git committed werden!
+
+### 3. App starten
 
 ```bash
 # Entwicklungsmodus
@@ -40,8 +54,8 @@ npm start
 ## Nutzung
 
 1. **Erste Einrichtung**:
+   - Stellen Sie sicher, dass die `.env` Datei korrekt konfiguriert ist
    - Starten Sie die App
-   - Geben Sie Ihre Spotify Client ID und Client Secret ein
    - Klicken Sie auf "Mit Spotify verbinden"
    - Autorisieren Sie die App in Ihrem Browser
 
@@ -94,7 +108,8 @@ Die App verwendet verschiedene Lyrics-APIs:
 - Einige Songs haben möglicherweise keine verfügbaren Lyrics
 
 ### "Verbindung zu Spotify fehlgeschlagen"
-- Überprüfen Sie Ihre Client ID und Client Secret
+- Überprüfen Sie Ihre Client ID in der `.env` Datei
+- Stellen Sie sicher, dass die Redirect URI korrekt konfiguriert ist (`http://127.0.0.1:8888/callback`)
 - Stellen Sie sicher, dass Spotify läuft und ein Song abgespielt wird
 - Autorisieren Sie die App erneut
 
