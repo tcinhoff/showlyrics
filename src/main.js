@@ -4,7 +4,10 @@ const path = require('path');
 let mainWindow;
 let lyricsWindow;
 let tray;
-let isLyricsVisible = true;
+let isLyricsVisible = false; // Start hidden
+let autoHideEnabled = true;
+let autoHideTimeout = null;
+let lastPlayingState = null;
 
 
 function createMainWindow() {
@@ -52,10 +55,12 @@ function createLyricsWindow() {
       contextIsolation: false
     },
     skipTaskbar: true,
-    show: true // Start visible
+    show: false // Start hidden, will auto-show when music plays
   });
 
   lyricsWindow.loadFile(path.join(__dirname, 'lyrics.html'));
+
+  // Interaction tracking is handled in lyrics-renderer.js
 
   if (process.argv.includes('--dev')) {
     lyricsWindow.webContents.openDevTools();
@@ -116,6 +121,39 @@ function toggleLyrics() {
       isLyricsVisible = true;
     }
     updateTrayMenu();
+  }
+}
+
+function autoShowLyrics() {
+  if (lyricsWindow && !lyricsWindow.isVisible()) {
+    lyricsWindow.show();
+    isLyricsVisible = true;
+    updateTrayMenu();
+  }
+}
+
+function autoHideLyrics() {
+  if (lyricsWindow && lyricsWindow.isVisible() && autoHideEnabled) {
+    lyricsWindow.hide();
+    isLyricsVisible = false;
+    updateTrayMenu();
+  }
+}
+
+function scheduleAutoHide() {
+  if (autoHideTimeout) {
+    clearTimeout(autoHideTimeout);
+  }
+  
+  autoHideTimeout = setTimeout(() => {
+    autoHideLyrics();
+  }, 30000); // Hide after 30 seconds of no music
+}
+
+function cancelAutoHide() {
+  if (autoHideTimeout) {
+    clearTimeout(autoHideTimeout);
+    autoHideTimeout = null;
   }
 }
 
@@ -194,7 +232,27 @@ ipcMain.on('update-lyrics', (event, lyrics) => {
 ipcMain.on('update-playback-position', (event, position) => {
   if (lyricsWindow) {
     lyricsWindow.webContents.send('playback-position-updated', position);
+    
+    // Auto-show/hide logic based on playback state
+    if (position.isPlaying) {
+      cancelAutoHide();
+      autoShowLyrics();
+      lastPlayingState = true;
+    } else if (lastPlayingState === true) {
+      // Only schedule auto-hide when transitioning from playing to paused/stopped
+      scheduleAutoHide();
+      lastPlayingState = false;
+    }
   }
+});
+
+// Handle user interaction events
+ipcMain.on('lyrics-interaction', () => {
+  cancelAutoHide();
+});
+
+ipcMain.on('music-stopped', () => {
+  scheduleAutoHide();
 });
 
 // Auto-start IPC handlers
@@ -220,3 +278,9 @@ ipcMain.handle('set-auto-start', async (event, enabled) => {
     return false;
   }
 });
+
+// Setup lyrics window interaction tracking
+function setupLyricsInteractionTracking() {
+  // Interaction tracking is now handled directly in lyrics-renderer.js
+  // This function is kept for compatibility but no longer needed
+}
